@@ -51,7 +51,7 @@ app.use(bodyParser());
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-mongoose.connect(process.env.URLS,{useNewUrlParser: true});
+mongoose.connect(process.env.URL,{useNewUrlParser: true});
 
 const shopSchema = {
     ShopID:String,
@@ -241,48 +241,6 @@ app.get("/filter/:category", (req,res)=>{
         }
     });
 });
-
-
-
-// app.post("/try", upload.single("shopImage") ,(req,res)=>{
- 
-//     // //check whether client exist 
-//     Client.findOne({ID:req.body.businessNumber}, (err, find)=>{
-//         if(!err){
-//             if(find){
-//                 //check wether shop name exist already
-//                 Shop.findOne({shopName:_.upperFirst(req.body.shopName)}, (err,foundShop)=>{
-//                     if(!err){
-//                         if(foundShop){
-//                             res.status(403).send("Shop already exist");
-//                         }else{
-//                             //save shop
-//                             const shop = new Shop({
-//                                 category: _.upperFirst(req.body.category),
-//                                 shopName: _.upperFirst(req.body.shopName),
-//                                 region: _.upperFirst(req.body.region),
-//                                 city: _.upperFirst(req.body.city),
-//                                 landMark: _.upperFirst(req.body.landMark),
-//                                 businessNumber: req.body.businessNumber,
-//                                 whatsAppNumber: req.body.whatsAppNumber,
-//                                 discription: req.body.discription,
-//                             });
-//                             const hi = find.shop.push(shop)
-//                             console.log(hi);
-//                         }
-//                     }else{
-//                         res.status(404).send();
-//                     }
-//                 });
-//             }else{
-//                 res.status(404).send("user not found");
-//             }
-//         }else{
-//             res.send(err);
-//         }
-        
-//     }); 
-// });
 
 
 app.post("/upload",upload.single("shopImage"),(req,res)=>{
