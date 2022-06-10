@@ -51,7 +51,7 @@ app.use(bodyParser());
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-mongoose.connect(process.env.URL,{useNewUrlParser: true});
+mongoose.connect(process.env.URLS,{useNewUrlParser: true});
 
 const shopSchema = {
     ShopID:String,
@@ -148,7 +148,7 @@ app.post("/login", (req,res)=>{
 
 
 app.post("/addShop",(req,res)=>{
-    let {ShopID,email,category,shopName,region,city,landMark,businessNumber,discription,image} = req.body;
+    let {email,category,shopName,region,city,landMark,businessNumber,discription,image} = req.body;
     // const shopID = _.kebabCase(email+businessNumber);
     const ID = _.kebabCase(email);
     const shopname = _.upperFirst(shopName);
