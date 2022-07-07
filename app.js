@@ -51,8 +51,36 @@ app.use(bodyParser());
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-mongoose.connect(process.env.URLS,{useNewUrlParser: true});
+mongoose.connect(process.env.URL,{useNewUrlParser: true});
 
+const shopWorkersSchema={
+    WorkerID: String,
+    name: String,
+    age: String,
+    number: String,
+    image: String,
+    rate: String,
+    category: String,
+}
+
+const shopPhotosSchema = {
+    photoUri: String,
+    shopPhotoID: String
+}
+
+const shopCategoriesSchema= {
+    imageUri: String,
+    title: String,
+    snippet: String,
+    shopCategoryID:String
+}
+
+const shopGallerySchema = {
+    imageUri: String,
+    shopGalleryID: String,
+    dateUploaded:String,
+    id:String
+}
 const shopSchema = {
     ShopID:String,
     email:String,
@@ -63,18 +91,52 @@ const shopSchema = {
     landMark: String,
     businessNumber: String,
     discription: String,
-    image: String
+    image: String,
+    dateCreated: String,
+    rate: String,
+    workers: {
+        type: [shopWorkersSchema],
+        default: null
+    },
+    photos: {
+        type: [shopPhotosSchema],
+        default:null
+    },
+    shopCategories:{
+        type: [shopCategoriesSchema],
+        default:null
+    },
+    gallery:{
+        type: [shopGallerySchema],
+        default:null
+    }
 };
 
 const userSchema = new mongoose.Schema({
-    Name: String,
+    username: String,
     email: String,
     password: String,
     phone: String,
     DOB: String,
     ID: String,
+    about:{
+        type: String,
+        default: null
+    },
+    FullName:{
+        type: String,
+        default: null
+    },
+    website: {
+        type: String,
+        default: null
+    },
+    profileImage:{
+        type: String,
+        default: process.env.PFP
+    },
     shop: {
-        type: shopSchema,
+        type: [shopSchema],
         default: null
     }
 });
@@ -84,12 +146,14 @@ const userSchema = new mongoose.Schema({
 
 const User = new mongoose.model("User", userSchema);
 const Shop = new mongoose.model("Shop", shopSchema);
+const ShopWorker = new mongoose.model("ShopWorker", shopWorkersSchema);
+const ShopPhoto = new mongoose.model("ShopPhoto", shopPhotosSchema);
+const ShopGallery = new mongoose.model("ShopGalley", shopGallerySchema);
 
 // passport.use(User.createStrategy());
 
 // passport.serializeUser(User.serializeUser());
 // passport.deserializeUser(User.deserializeUser());
-
 
 
 //END POINTS
@@ -106,7 +170,7 @@ app.post("/register", (req,res)=>{
                 res.status(403).send("User with the email( "+email+" ) alredy exist");
             }else{
                 const client = new User({
-                    Name: _.upperFirst(username),
+                    username: _.upperFirst(username),
                     ID:  ID,
                     email: email,
                     password: password,
@@ -146,10 +210,8 @@ app.post("/login", (req,res)=>{
 });
 
 
-
 app.post("/addShop",(req,res)=>{
-    let {email,category,shopName,region,city,landMark,businessNumber,discription,image} = req.body;
-    // const shopID = _.kebabCase(email+businessNumber);
+    let {email,category,shopName,region,city,landMark,businessNumber,discription,image,dateCreated} = req.body;
     const ID = _.kebabCase(email);
     const shopname = _.upperFirst(shopName);
     // //check whether client exist 
@@ -165,6 +227,7 @@ app.post("/addShop",(req,res)=>{
                         }else{
                             //save shop
                             const shop = new Shop({
+                                email:email,
                                 ShopID:ID,
                                 category: _.upperFirst(category),
                                 shopName: _.upperFirst(shopName),
@@ -173,37 +236,23 @@ app.post("/addShop",(req,res)=>{
                                 landMark: _.upperFirst(landMark),
                                 businessNumber: businessNumber,
                                 discription: discription,
-                                image: image
+                                image: image,
+                                dateCreated:dateCreated,
+                                rate:"1"
                             });
-                            const item = {
-                                ShopID:ID,
-                                category: _.upperFirst(category),
-                                shopName: _.upperFirst(shopName),
-                                region: _.upperFirst(region),
-                                city: _.upperFirst(city),
-                                landMark: _.upperFirst(landMark),
-                                businessNumber: businessNumber,
-                                discription: discription,
-                                image: image
-                            }
-                            shop.save((err)=>{
+    
+                            find.shop.push(shop);
+                            find.save((err)=>{
                                 if(!err){
                                     //Now update the client by adding the shop
-                                    const updtae = find.shop;
-                                    const updatedShop= item;
-                                    console.log(updatedShop);
-                                    User.findOneAndUpdate({ID:ID}, {shop: updatedShop}, (err)=>{
-                                        if(!err){
-                                            //Find the client details and send it to the client
-                                            User.findOne({ID:ID},(err,client)=>{
-                                                if(!err){
-                                                    res.status(200).send(client);
-                                                }else{
-                                                    res.status(505).send();
-                                                }
-                                            })
-                                        }
-                                    });
+                                    User.findOne({ID:ID},(err,client)=>{
+                                                    if(!err){
+                                                        shop.save();
+                                                        res.status(200).send(client);
+                                                    }else{
+                                                        res.status(505).send();
+                                                    }
+                                                });
                                 }else{
                                     res.status(401).send(err);
                                 }
@@ -224,6 +273,68 @@ app.post("/addShop",(req,res)=>{
     }); 
 });
 
+app.post("/gallery",(req,res)=>{
+    let {email,imageUri,dateUploaded,shopID} = req.body;
+    const shopGalleryID = _.kebabCase(email);
+    // console.log(1);
+   Shop.findOne({_id:shopID},(err,find)=>{
+    // console.log(2);
+    if(!err){
+        if(find){
+            // console.log(3);
+            
+            // let id = find.gallery.length+1;
+            const gallery = new ShopGallery({
+                shopGalleryID:shopGalleryID,
+                imageUri: imageUri,
+                dateUploaded:dateUploaded,
+                // id: id
+            });
+            find.gallery.push(gallery);
+            find.save((err)=>{
+                if(!err){
+                    Shop.findOne({_id:shopID},(err,found)=>{
+                        if(!err){
+                            if(found){
+                                res.status(200).send(found.gallery.reverse());
+                            }
+                        }
+                    })
+                }
+            })
+        }else{
+            res.status(403).send("shop Not found");
+        }
+    }
+   });
+    
+});
+
+app.post("/deletegallery",(req,res)=>{
+    let {galleryID,shopID}=req.body;
+    
+    Shop.findOneAndUpdate({_id: shopID},{ $pull: {gallery: {_id: galleryID}}}, (err,foundList)=>{
+        if(!err){
+            if(foundList){
+                ///
+                Shop.findOne({_id:shopID},(err,found)=>{
+                    if(!err){
+                        if(found){
+                            res.status(200).send(found.gallery.reverse());
+                        }
+                    }
+                })
+                
+                ///
+
+            }else{
+                res.status(404).send("Gallery does not exist!");
+            }
+        }
+      });
+
+});
+
 app.get("/filter/:category", (req,res)=>{
     const category = _.lowerCase(req.params.category)
     console.log(category);
@@ -242,53 +353,112 @@ app.get("/filter/:category", (req,res)=>{
     });
 });
 
+app.get("/myshop/:shopID",(req,res)=>{
+    const shopID = _.kebabCase(req.params.shopID);
+
+    Shop.find({ShopID:shopID},(err,found)=>{
+        if(!err){
+            if(found){
+                res.status(200).send(found); 
+            }else{
+                res.status(404).send("Shop not found");
+            }
+        }else{
+            res.status(505).send();
+        }
+    });
+});
+
+app.get("/user/:id", (req,res)=>{
+    const id = req.params.id
+    User.findOne({_id:id},(err,found)=>{
+        if(!err){
+            if(found){
+                res.status(200).send(found);
+            }else{
+                res.status(404).send("No user Found");
+            }
+        }
+    })
+});
+
+app.get("/shops",(req,res)=>{
+    Shop.find((err,found)=>{
+        if(!err){
+            if(found){
+                res.status(200).send(found);
+            }else{
+                res.status(402).send("No shop found");
+            }
+        }else{
+            res.status(505).send(err);
+        }
+    })
+});
+
+app.get("/shop/:id",(req,res)=>{
+    const id = req.params.id;
+    Shop.findById(id,(err,found)=>{
+        if(!err){
+            if(found){
+                res.status(200).send(found);
+            }
+        }
+    })
+});
+
+app.post("/update_profile",(req,res)=>{
+    let {id,fullName,username,website,about,phone,profileImage} = req.body;
+    User.findByIdAndUpdate(id, {FullName:fullName,username:username,website:website,about:about,phone:phone,profileImage:profileImage},(err)=>{
+        if(!err){
+            User.findOne({id:id},(err,found)=>{
+                if(!err){
+                    if(found){
+                        res.status(200).send(found);
+                    }
+                }
+            })
+            
+        }else{
+            res.status(505).send("Check your internet connnection and try again!");
+        }
+    });
+});
 
 
-// app.post("/try", upload.single("shopImage") ,(req,res)=>{
- 
-//     // //check whether client exist 
-//     Client.findOne({ID:req.body.businessNumber}, (err, find)=>{
-//         if(!err){
-//             if(find){
-//                 //check wether shop name exist already
-//                 Shop.findOne({shopName:_.upperFirst(req.body.shopName)}, (err,foundShop)=>{
-//                     if(!err){
-//                         if(foundShop){
-//                             res.status(403).send("Shop already exist");
-//                         }else{
-//                             //save shop
-//                             const shop = new Shop({
-//                                 category: _.upperFirst(req.body.category),
-//                                 shopName: _.upperFirst(req.body.shopName),
-//                                 region: _.upperFirst(req.body.region),
-//                                 city: _.upperFirst(req.body.city),
-//                                 landMark: _.upperFirst(req.body.landMark),
-//                                 businessNumber: req.body.businessNumber,
-//                                 whatsAppNumber: req.body.whatsAppNumber,
-//                                 discription: req.body.discription,
-//                             });
-//                             const hi = find.shop.push(shop)
-//                             console.log(hi);
-//                         }
-//                     }else{
-//                         res.status(404).send();
-//                     }
-//                 });
-//             }else{
-//                 res.status(404).send("user not found");
-//             }
-//         }else{
-//             res.send(err);
-//         }
-        
-//     }); 
-// });
+app.post("/editShop",(req,res)=>{
+    let {id,email,businessNumber,category,city,about,imageURL,landMark,region,shopCategories,shopName} = req.body;
+    Shop.findByIdAndUpdate(id,{
+        email:email,
+        category: category,
+        shopName: shopName,
+        region: region,
+        city: city,
+        landMark: landMark,
+        businessNumber: businessNumber,
+        discription: about,
+        image: imageURL,
+        shopCategories:shopCategories
+    },(err)=>{
+        if(!err){
+            Shop.findById(id,(err,found)=>{
+                if(!err){
+                    if(found){
+                        res.status(200).send(found);
+                    }
+                }
+            })
+        }else{
+            res.status(505).send("Check your internet connnection and try again!");
+        }
+    });
+});
 
 
 app.post("/upload",upload.single("shopImage"),(req,res)=>{
     console.log(req.file);
     res.send("sent");
-})
+});
 
 
 
