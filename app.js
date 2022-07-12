@@ -51,21 +51,32 @@ app.use(bodyParser());
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-mongoose.connect(process.env.URL,{useNewUrlParser: true});
+mongoose.connect(process.env.URLS,{useNewUrlParser: true});
+
+
+const shopPhotosSchema = {
+    photoUri: String,
+    shopPhotoID: String
+}
 
 const shopWorkersSchema={
     WorkerID: String,
     name: String,
     age: String,
     number: String,
-    image: String,
     rate: String,
+    email:String,
     category: String,
-}
-
-const shopPhotosSchema = {
-    photoUri: String,
-    shopPhotoID: String
+    about:String,
+    address:String,
+    profileImage:{
+        type: String,
+        default: process.env.PFP
+    },
+    photos: {
+        type: [shopPhotosSchema],
+        default:null
+    },
 }
 
 const shopCategoriesSchema= {
@@ -359,7 +370,7 @@ app.get("/myshop/:shopID",(req,res)=>{
     Shop.find({ShopID:shopID},(err,found)=>{
         if(!err){
             if(found){
-                res.status(200).send(found); 
+                res.status(200).send(found.reverse()); 
             }else{
                 res.status(404).send("Shop not found");
             }
@@ -425,6 +436,32 @@ app.post("/update_profile",(req,res)=>{
     });
 });
 
+app.post("/update_shopworker",(req,res)=>{
+    
+   let{idw,ids,email,name,age,number,category,about,address,imageUri} = req.body;
+
+    Shop.updateOne({'workers._id': idw}, {'$set': {
+        'workers.$.name': name,
+        'workers.$.email': email,
+        'workers.$.age': age,
+        'workers.$.number': number,
+        'workers.$.category': category,
+        'workers.$.about': about,
+        'workers.$.profileImage': imageUri,
+        'workers.$.address': address,
+    }},(err)=> {
+        if(!err){
+            Shop.findOne({_id:ids},(err,found)=>{
+                if(!err){
+                    if(found){
+                        res.status(200).send(found.workers.reverse());
+                    }
+                }
+            })
+        }
+    })
+
+})
 
 app.post("/editShop",(req,res)=>{
     let {id,email,businessNumber,category,city,about,imageURL,landMark,region,shopCategories,shopName} = req.body;
@@ -454,6 +491,102 @@ app.post("/editShop",(req,res)=>{
     });
 });
 
+app.post("/shopworker",(req,res)=>{
+    let {name,age,number,category,about,address,profileImage,email,ShopID} = req.body;
+    const workerID = _.kebabCase(email);
+    Shop.findOne({_id:ShopID},(err,find)=>{
+        if(!err){
+            if(find){
+                const worker = new ShopWorker({
+                    WorkerID: workerID,
+                    name: name,
+                    age: age,
+                    number: number,
+                    rate: "1",
+                    category: category,
+                    about:about,
+                    email:email,
+                    address:address,
+                    profileImage:profileImage
+                });
+                find.workers.push(worker);
+                find.save((err)=>{
+                    if(!err){
+                        Shop.findOne({_id:ShopID},(err,found)=>{
+                            if(!err){
+                                if(found){
+                                    res.status(200).send(found.workers.reverse());
+                                }
+                            }
+                        })
+                    }
+                })
+            }else{
+                res.status(404).send("Shop does not exist!");
+            }
+        }
+    })
+
+});
+
+// finding the workers of a particular shop
+app.get("/shopworkers/:id",(req,res)=>{
+    let ShopID = req.params.id
+        Shop.findOne({_id:ShopID},(err,found)=>{
+            if(!err){
+                if(found){
+                    res.status(200).send(found.workers.reverse());
+                }
+            }
+        })
+});
+
+
+app.post("/deleteshopworker",(req,res)=>{
+    let {workerID,shopID}=req.body;
+    
+    Shop.findOneAndUpdate({_id: shopID},{ $pull: {workers: {_id: workerID}}}, (err,foundList)=>{
+        if(!err){
+            if(foundList){
+                ///
+                Shop.findOne({_id:shopID},(err,found)=>{
+                    if(!err){
+                        if(found){
+                            res.status(200).send(found.workers.reverse());
+                        }
+                    }
+                })
+                
+                ///
+
+            }else{
+                res.status(404).send("Gallery does not exist!");
+            }
+        }
+      });
+
+});
+
+app.post("/deleteshop",(req,res)=>{
+    let {id,email}=req.body;
+    const shopID = _.kebabCase(email);
+    Shop.findByIdAndDelete(id,(err)=>{
+        if(!err){
+            
+            Shop.find({ShopID:shopID},(err,found)=>{
+                if(!err){
+                    if(found){
+                        res.status(200).send(found.reverse()); 
+                    }else{
+                        res.status(404).send("Shop not found");
+                    }
+                }else{
+                    res.status(505).send();
+                }
+            });
+        }
+    })
+})
 
 app.post("/upload",upload.single("shopImage"),(req,res)=>{
     console.log(req.file);
