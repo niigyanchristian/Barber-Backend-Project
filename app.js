@@ -203,13 +203,24 @@ app.post("/register", (req,res)=>{
 app.post("/login", (req,res)=>{
     let {email,password} = req.body;
     const ID = _.kebabCase(email);
+    let shops;
+    Shop.find((err,found)=>{
+        if(!err){
+            if(found){
+                shops=found;
+            }else{
+                res.status(402).send("No shop found");
+            }
+        }
+    })
     User.findOne({ID:ID},(err,found)=>{
         if(err){
             res.status(400).send(err.message);
         }else{
             if(found){
                 if(found.password== password){
-                    res.status(200).send(found);  
+                    
+                    res.status(200).send({"found":found,"shops":shops});  
                 }else{
                     res.status(401).send('wrong password');
                 }
@@ -568,8 +579,13 @@ app.post("/deleteshopworker",(req,res)=>{
 });
 
 app.post("/deleteshop",(req,res)=>{
-    let {id,email}=req.body;
+    let {id,email,userID}=req.body;
     const shopID = _.kebabCase(email);
+    User.findOneAndUpdate({_id: userID},{ $pull: {shop: {_id: id}}}, (err,foundList)=>{
+        if(err){
+        console.log(err);
+        }
+      });
     Shop.findByIdAndDelete(id,(err)=>{
         if(!err){
             
