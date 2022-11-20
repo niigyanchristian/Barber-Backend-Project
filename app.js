@@ -51,7 +51,7 @@ app.use(bodyParser());
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-mongoose.connect(process.env.URLS,{useNewUrlParser: true});
+mongoose.connect(process.env.URL,{useNewUrlParser: true});
 
 
 const shopPhotosSchema = {
